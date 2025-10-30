@@ -64,10 +64,17 @@ def main():
         lr=config.LEARNING_RATE,
         momentum=config.MOMENTUM
     )
+    
+    train_loader = dataloader_dict["train"]
+    num_steps_per_epoch = len(train_loader)
+    total_steps = num_steps_per_epoch * config.NUM_EPOCHS
+
     print(f"손실 함수: CrossEntropyLoss")
     print(f"옵티마이저: SGD (lr={config.LEARNING_RATE}, momentum={config.MOMENTUM})")
     print(f"배치 크기: {config.BATCH_SIZE}")
     print(f"에포크 수: {config.NUM_EPOCHS}")
+    print(f"스텝 수(에포크당): {num_steps_per_epoch}")
+    print(f"총 학습 스텝 수: {total_steps}")
 
     # 5. 모델 학습
     print("\n[5단계] 모델 학습 시작...")
