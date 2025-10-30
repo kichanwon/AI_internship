@@ -73,7 +73,7 @@ def main():
     print("\n[5단계] 모델 학습 시작...")
     trained_model, best_val_acc = train_model(
         model, dataloader_dict, criterion, optimizer,
-        config.NUM_EPOCHS, config.DEVICE
+        config.NUM_EPOCHS, config.DEVICE, config.TENSORBOARD_LOG_DIR
     )
 
     # 6. 최고 성능 모델 저장

@@ -14,7 +14,13 @@ os.makedirs(TENSORBOARD_LOG_DIR, exist_ok=True)  # 로그 폴더 생성
 
 
 # 데이터 경로
-DATA_PATH = '../../../data/mnist.npz'
+# DATA_PATH = '../../../data/mnist.npz'
+DATA_PATH = os.path.join(os.path.expanduser('~'), 'data', 'mnist.npz')
+
+if os.path.exists(DATA_PATH):
+    print(f"데이터 파일 발견: {DATA_PATH}")
+else:
+    raise FileNotFoundError(f"데이터 파일을 찾을 수 없습니다: {DATA_PATH}")
 
 # 이미지 설정
 IMAGE_SIZE = 28  # MNIST 이미지 크기 (28x28)
@@ -29,7 +35,7 @@ STD = (0.3081,)   # MNIST 데이터셋의 표준편차
 
 # 학습 하이퍼파라미터
 BATCH_SIZE = 64  # 한 번에 처리할 데이터 개수
-NUM_EPOCHS = 5   # 전체 데이터를 몇 번 반복 학습할지
+NUM_EPOCHS = 10   # 전체 데이터를 몇 번 반복 학습할지
 LEARNING_RATE = 0.01  # 학습률 (가중치 업데이트 크기)
 MOMENTUM = 0.9   # SGD 옵티마이저의 모멘텀
 

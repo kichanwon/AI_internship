@@ -45,7 +45,10 @@ class MNISTDataset(Dataset):
         # numpy 배열을 PyTorch 텐서로 변환
         image = torch.from_numpy(image)
         label = torch.tensor(label, dtype=torch.long)
-        
+
+        if self.transform:
+            image = self.transform(image, self.phase)
+            
         return image, label
 
 def load_mnist_data(data_path, val_size=0.2, random_state=42):

@@ -59,15 +59,17 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
             running_loss = 0.0  # 누적 손실
             running_corrects = 0  # 누적 정답 개수
 
-            # 학습 단계에서만 gradient 초기화
-            if phase == 'train':
-                optimizer.zero_grad()
+
 
             for batch_idx, (inputs, labels) in enumerate(tqdm(dataloader_dict[phase], desc=f'{phase} phase')):
                 # 데이터를 device로 이동
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 
+                # 학습 단계에서만 gradient 초기화
+                if phase == 'train':
+                    optimizer.zero_grad()
+
                 with torch.set_grad_enabled(phase == 'train'):  # 학습 단계에만 gradient 계산
                     with torch.amp.autocast(device_type=config.DEVICE.type):  # Mixed Precision 적용
                         outputs = model(inputs)  # 모델 예측
@@ -105,10 +107,18 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
                 # 학습률 기록
                 current_lr = optimizer.param_groups[0]['lr']
                 writer.add_scalar('Epoch/Learning_Rate', current_lr, epoch)
+            else:
+                # 검증 손실/정확도 기록
+                val_loss_list.append(running_loss)
+                val_acc_list.append(running_acc.item())
+                
+                writer.add_scalar('Epoch/Val_Loss', running_loss, epoch)
+                writer.add_scalar('Epoch/Val_Accuracy', running_acc, epoch)
 
             if phase == 'val' and running_acc > best_acc: # 최고 성능 갱신
                 best_acc = running_acc
                 best_model_wts = model.state_dict().copy()
+                
         # 에포크마다 Train vs Val 비교 그래프
         writer.add_scalars('Comparison/Loss', {
             'Train': train_loss_list[-1],
