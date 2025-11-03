@@ -59,18 +59,19 @@ def main():
     # 4. 손실 함수 및 옵티마이저 설정
     print("\n[4단계] 학습 설정 중...")
     criterion = nn.CrossEntropyLoss().to(config.DEVICE)
-    optimizer = optim.SGD(
+    optimizer = optim.Adam(
         model.parameters(),
         lr=config.LEARNING_RATE,
-        momentum=config.MOMENTUM
+        betas=config.ADAM_BETAS,
+        weight_decay=config.ADAM_WEIGHT_DECAY
     )
-    
+
     train_loader = dataloader_dict["train"]
     num_steps_per_epoch = len(train_loader)
     total_steps = num_steps_per_epoch * config.NUM_EPOCHS
 
     print(f"손실 함수: CrossEntropyLoss")
-    print(f"옵티마이저: SGD (lr={config.LEARNING_RATE}, momentum={config.MOMENTUM})")
+    print(f"옵티마이저: Adam (lr={config.LEARNING_RATE}, betas={config.ADAM_BETAS})")
     print(f"배치 크기: {config.BATCH_SIZE}")
     print(f"에포크 수: {config.NUM_EPOCHS}")
     print(f"스텝 수(에포크당): {num_steps_per_epoch}")

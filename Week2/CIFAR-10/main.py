@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dog vs Cat Classification - Main Training Script
+MNIST 손글씨 숫자 분류 - 메인 실행 스크립트
 """
 
 import torch
@@ -10,100 +10,118 @@ import os
 
 # 사용자 정의 모듈 import
 import config
-from dataset import prepare_data
-from dataloader import create_dataloaders
+from dataset import load_mnist_data
+from dataloader import create_dataloaders, get_test_dataloader
 from model import create_model
 from trainer import train_model
-from evaluator import predict_on_test_data, create_confusion_matrix, display_predictions
-
+from evaluator import (
+    evaluate_model,
+    plot_confusion_matrix,
+    print_classification_report,
+    visualize_predictions
+)
 def main():
     """메인 실행 함수"""
     
     # 디바이스 설정
     print(f"Using device: {config.DEVICE}")
     
-    # 1. 데이터 준비
-    print("\n=== 데이터 준비 중... ===")
-    train_files, val_files, test_files = prepare_data(
-        config.CAT_DIRECTORY, 
-        config.DOG_DIRECTORY,
-        test_size=config.TEST_SIZE,
+    # 1. 데이터 로드
+    print("\n[1단계] 데이터 로드 중...")
+    x_train, y_train, x_val, y_val, x_test, y_test = load_mnist_data(
+        config.DATA_PATH,
         val_size=config.VAL_SIZE,
         random_state=config.RANDOM_STATE
     )
     
-    print(f"훈련 데이터: {len(train_files)}개")
-    print(f"검증 데이터: {len(val_files)}개")
-    print(f"테스트 데이터: {len(test_files)}개")
+    print(f"훈련 데이터: {len(x_train)}개")
+    print(f"검증 데이터: {len(x_val)}개")
+    print(f"테스트 데이터: {len(x_test)}개")
     
     # 2. 데이터로더 생성
-    print("\n=== 데이터로더 생성 중... ===")
+    print("\n[2단계] 데이터로더 생성 중...")
     dataloader_dict = create_dataloaders(
-        train_files, val_files,
-        config.IMAGE_SIZE, config.MEAN, config.STD,
+        x_train, y_train, x_val, y_val,
+        config.MEAN, config.STD,
         config.BATCH_SIZE
     )
-    
-    # 3. 모델 생성
-    print("\n=== 모델 생성 중... ===")
-    model = create_model(config.DEVICE)
-    
-    # 4. 손실 함수 및 옵티마이저 설정
-    criterion = nn.CrossEntropyLoss().to(config.DEVICE)
-    optimizer = optim.SGD(
-        model.parameters(), 
-        lr=config.LEARNING_RATE, 
-        momentum=config.MOMENTUM
-    )
-    
-    # 5. 모델 학습
-    print("\n=== 모델 학습 시작... ===")
-    trained_model, best_acc = train_model(
-        model, dataloader_dict, criterion, optimizer, 
-        config.NUM_EPOCHS, config.DEVICE
+
+    test_dataloader = get_test_dataloader(
+        x_test, y_test,
+        config.MEAN, config.STD,
+        config.BATCH_SIZE
     )
 
-    # 5-1. 최고 성능 모델 저장
-    model_path = os.path.join(config.RESULT_DIR, "best_model.pth")
+    # 3. 모델 생성
+    print("\n[3단계] 모델 생성 중...")
+    model = create_model(config.DEVICE, config.NUM_CLASSES)
+    
+    # 4. 손실 함수 및 옵티마이저 설정
+    print("\n[4단계] 학습 설정 중...")
+    criterion = nn.CrossEntropyLoss().to(config.DEVICE)
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=config.LEARNING_RATE,
+        betas=config.ADAM_BETAS,
+        weight_decay=config.ADAM_WEIGHT_DECAY
+    )
+
+    train_loader = dataloader_dict["train"]
+    num_steps_per_epoch = len(train_loader)
+    total_steps = num_steps_per_epoch * config.NUM_EPOCHS
+
+    print(f"손실 함수: CrossEntropyLoss")
+    print(f"옵티마이저: Adam (lr={config.LEARNING_RATE}, betas={config.ADAM_BETAS})")
+    print(f"배치 크기: {config.BATCH_SIZE}")
+    print(f"에포크 수: {config.NUM_EPOCHS}")
+    print(f"스텝 수(에포크당): {num_steps_per_epoch}")
+    print(f"총 학습 스텝 수: {total_steps}")
+
+    # 5. 모델 학습
+    print("\n[5단계] 모델 학습 시작...")
+    trained_model, best_val_acc = train_model(
+        model, dataloader_dict, criterion, optimizer,
+        config.NUM_EPOCHS, config.DEVICE, config.TENSORBOARD_LOG_DIR
+    )
+
+    # 6. 최고 성능 모델 저장
+    print("\n[6단계] 모델 저장 중...")
+    model_path = os.path.join(config.RESULT_DIR, "best_mnist_model.pth")
     torch.save(trained_model.state_dict(), model_path)
-    print(f"최고 성능 모델이 '{model_path}'에 저장되었습니다.")
+    print(f"model_path: '{model_path}'")
     
-    # 6. 테스트 데이터 예측
-    print("\n=== 테스트 데이터 예측 중... ===")
-    predictions = predict_on_test_data(
-        trained_model, test_files,
-        config.IMAGE_SIZE, config.MEAN, config.STD,
-        config.DEVICE
+    # 7. 테스트 데이터 평가
+    print("\n[7단계] 테스트 데이터 평가 중...")
+    test_acc, y_pred, y_true = evaluate_model(
+        trained_model, test_dataloader, config.DEVICE
     )
+        
+    print(f"\n{'='*60}")
+    print(f"최종 결과")
+    print(f"{'='*60}")
+    print(f"최고 검증 정확도: {best_val_acc:.4f} ({best_val_acc*100:.2f}%)")
+    print(f"테스트 정확도: {test_acc:.4f} ({test_acc*100:.2f}%)")
+    print(f"{'='*60}")
     
-    # 예측 결과 저장
-    predictions.to_csv(os.path.join(config.RESULT_DIR, 'LeNet_predictions.csv'), index=False)
-    print("예측 결과가 'LeNet_predictions.csv'에 저장되었습니다.")
+    # 8. 혼동 행렬 생성
+    print("\n[8단계] 혼동 행렬 생성 중...")
+    cm_path = os.path.join(config.RESULT_DIR, "confusion_matrix.png")
+    plot_confusion_matrix(y_true, y_pred, config.CLASSES, cm_path)
     
-    # 7. 혼동행렬 생성
-    print("\n=== 혼동행렬 생성 중... ===")
-    cm, true_labels, pred_labels = create_confusion_matrix(
-        trained_model, test_files,
-        config.IMAGE_SIZE, config.MEAN, config.STD,
-        config.DEVICE,
-        save_path=os.path.join(config.RESULT_DIR, "confusion_matrix.png")
+    # 9. 분류 리포트 출력
+    print_classification_report(y_true, y_pred, config.CLASSES)
+    
+    # 10. 예측 결과 시각화
+    print("\n[9단계] 예측 결과 시각화 중...")
+    vis_path = os.path.join(config.RESULT_DIR, "predictions_visualization.png")
+    visualize_predictions(
+        trained_model, test_dataloader, config.DEVICE,
+        config.CLASSES, vis_path, num_images=20
     )
-    
-    # 8. 예측 결과 시각화
-    print("\n=== 예측 결과 시각화 중... ===")
-    display_predictions(
-        test_files, predictions, config.CLASSES,
-        n=10, save_path=os.path.join(config.RESULT_DIR, "predictions_by_true_labels.png")
-    )
-    
-    # 9. 최종 결과 출력
-    print(f"\n=== 최종 결과 ===")
-    print(f"최고 검증 정확도: {best_acc:.4f}")
-    
-    # 테스트 정확도 계산
-    correct_predictions = sum(1 for true, pred in zip(true_labels, pred_labels) if true == pred)
-    test_accuracy = correct_predictions / len(true_labels)
-    print(f"테스트 정확도: {test_accuracy:.4f}")
+        
+    print("=" * 60)
+    print("Fin")
+    print(f"'{config.RESULT_DIR}'")
 
 if __name__ == "__main__":
     main()

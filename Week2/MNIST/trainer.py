@@ -24,7 +24,15 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
     # 실행 시간을 폴더명에 포함하여 구분
     from datetime import datetime
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    writer = SummaryWriter(os.path.join(log_dir, f'mnist_experiment_{timestamp}'))
+    optimizer_name = optimizer.__class__.__name__
+    model_name = model.__class__.__name__
+    experiment_name = (
+        f"mnist_cnn/"  # 프로젝트 레벨
+        f"{model_name}/"  # 모델 레벨
+        f"{optimizer_name}/"  # 옵티마이저 레벨
+        f"lr{config.LEARNING_RATE}_bs{config.BATCH_SIZE}_{timestamp}_"  # 실험 상세
+    )
+    writer = SummaryWriter(os.path.join(log_dir, experiment_name))
     
     print(f"log saved: {writer.log_dir}")
     print(f"tensorboard --logdir={log_dir}")
@@ -58,8 +66,6 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
             
             running_loss = 0.0  # 누적 손실
             running_corrects = 0  # 누적 정답 개수
-
-
 
             for batch_idx, (inputs, labels) in enumerate(tqdm(dataloader_dict[phase], desc=f'{phase} phase')):
                 # 데이터를 device로 이동

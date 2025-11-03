@@ -1,145 +1,154 @@
-import os
-import cv2
-import math
-import random
 import torch
-import torch.nn.functional as F
-import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 from tqdm import tqdm
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from transforms import ImageTransform
 
-def predict_on_test_data(model, test_files, image_size, mean, std, device):
-    """테스트 데이터에 대한 예측을 수행하는 함수"""
-    id_list = []
-    pred_list = []
+def evaluate_model(model, dataloader, device):
+    """
+    모델 평가 함수
     
-    transform = ImageTransform(image_size, mean, std)
+    Args:
+        model: 평가할 모델
+        dataloader: 테스트 데이터로더
+        device: 'cuda' 또는 'cpu'
     
-    with torch.no_grad():
-        model.eval()
-        for test_path in tqdm(test_files, desc="Predicting"):
-            img = Image.open(test_path)
-            _id = os.path.basename(test_path).split('.')[0]
+    Returns:
+        accuracy: 정확도
+        all_preds: 모든 예측값
+        all_labels: 모든 실제 레이블
+    """
+    model.eval()  # 평가 모드로 전환
+    
+    all_preds = []
+    all_labels = []
+    
+    with torch.no_grad():  # 그래디언트 계산 비활성화 (메모리 절약)
+        for inputs, labels in tqdm(dataloader, desc="평가 중"):
+            inputs = inputs.to(device)
+            labels = labels.to(device)
             
-            img = transform(img, phase='val')
-            img = img.unsqueeze(0).to(device)
+            # 예측
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
             
-            outputs = model(img)
-            preds = F.softmax(outputs, dim=1)[:, 1].tolist()
-            
-            id_list.append(_id)
-            pred_list.append(preds[0])
+            # 결과 저장
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
     
-    results = pd.DataFrame({
-        'id': id_list,
-        'label': pred_list
-    })
+    # 정확도 계산
+    all_preds = np.array(all_preds)
+    all_labels = np.array(all_labels)
+    accuracy = np.mean(all_preds == all_labels)
     
-    results.sort_values(by='id', inplace=True)
-    results.reset_index(drop=True, inplace=True)
-    
-    return results
+    return accuracy, all_preds, all_labels
 
-def create_confusion_matrix(model, test_files, image_size, mean, std, device, save_path="confusion_matrix.png"):
-    """혼동행렬을 생성하고 시각화하는 함수"""
-    true_labels = []
-    pred_labels = []
-    
-    transform = ImageTransform(image_size, mean, std)  # 검증용 변환 적용
-    
-    with torch.no_grad():
-        model.eval()
-        for test_path in tqdm(test_files, desc="Creating confusion matrix"):
-            img = Image.open(test_path)
-            img = transform(img, phase='val') # 이미지 변환
-            img = img.unsqueeze(0).to(device) # 배치 차원 추가 후 device로 이동
-            
-            outputs = model(img) # 모델 예측
-            pred = torch.argmax(outputs, 1).item() # 예측 클래스 추출
-            
-            # 실제 라벨은 폴더명 기준
-            true_label = 1 if "dog" in test_path else 0 # dog=1, cat=0
-            
-            true_labels.append(true_label)
-            pred_labels.append(pred)
-    
-    # 혼동행렬 계산
-    cm = confusion_matrix(true_labels, pred_labels)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Cat", "Dog"])
-    disp.plot(cmap="Blues", values_format="d")
-    plt.title("Confusion Matrix")
-    plt.savefig(save_path)
-    plt.show()
-    
-    return cm, true_labels, pred_labels
 
-def display_predictions(test_files, predictions_df, classes, n=10, save_path="predictions_visualization.png"):
-    """예측 결과를 시각화하는 함수"""
+def plot_confusion_matrix(y_true, y_pred, classes, save_path):
+    """
+    혼동 행렬(Confusion Matrix) 시각화
     
-    # 실제 라벨별로 이미지 분리
-    true_cats = [path for path in test_files if 'cat' in path]
-    true_dogs = [path for path in test_files if 'dog' in path]
-    
-    # 각각에서 n개씩 무작위 선택
-    random.seed(42)
-    selected_true_cats = random.sample(true_cats, min(n, len(true_cats)))
-    selected_true_dogs = random.sample(true_dogs, min(n, len(true_dogs)))
+    Args:
+        y_true: 실제 레이블
+        y_pred: 예측 레이블
+        classes: 클래스 이름 딕셔너리
+        save_path: 저장 경로
+    """
+    # 혼동 행렬 계산
+    cm = confusion_matrix(y_true, y_pred)
     
     # 시각화
-    fig, axes = plt.subplots(nrows=2, ncols=n, figsize=(3*n, 6))
-    if n == 1:
-        axes = axes.reshape(2, 1)
+    fig, ax = plt.subplots(figsize=(10, 8))
+    disp = ConfusionMatrixDisplay(
+        confusion_matrix=cm,
+        display_labels=[classes[i] for i in range(len(classes))]
+    )
+    disp.plot(cmap='Blues', ax=ax, values_format='d')
     
-    # 실제 고양이들의 예측 결과
-    for i, filepath in enumerate(selected_true_cats):
-        _id = os.path.basename(filepath).split('.')[0]
-        pred_row = predictions_df[predictions_df['id'] == _id]
-        
-        if not pred_row.empty:
-            pred_prob = pred_row['label'].iloc[0]
-            pred_class = 1 if pred_prob >= 0.5 else 0
-            
-            img = cv2.imread(filepath)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            
-            # 예측이 맞는지 확인
-            is_correct = (pred_class == 0)  # 실제로 고양이
-            color = "green" if is_correct else "red"
-            
-            axes[0, i].imshow(img)
-            axes[0, i].set_title(f"True: Cat\nPred: {classes[pred_class]} ({pred_prob:.3f})", 
-                               color=color, fontsize=10)
-            axes[0, i].axis("off")
-    
-    # 실제 강아지들의 예측 결과
-    for i, filepath in enumerate(selected_true_dogs):
-        _id = os.path.basename(filepath).split('.')[0]
-        pred_row = predictions_df[predictions_df['id'] == _id]
-        
-        if not pred_row.empty:
-            pred_prob = pred_row['label'].iloc[0]
-            pred_class = 1 if pred_prob >= 0.5 else 0
-            
-            img = cv2.imread(filepath)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            
-            # 예측이 맞는지 확인
-            is_correct = (pred_class == 1)  # 실제로 강아지
-            color = "green" if is_correct else "red"
-            
-            axes[1, i].imshow(img)
-            axes[1, i].set_title(f"True: Dog\nPred: {classes[pred_class]} ({pred_prob:.3f})", 
-                               color=color, fontsize=10)
-            axes[1, i].axis("off")
-    
-    plt.suptitle("Test Dataset Predictions (Green=Correct, Red=Wrong)", fontsize=14)
+    plt.title('Confusion Matrix - MNIST Classification', fontsize=14)
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.show()
     
-    print(f"실제 고양이 이미지: {len(selected_true_cats)}개")
-    print(f"실제 강아지 이미지: {len(selected_true_dogs)}개")
-    print(f"결과 이미지가 '{save_path}'에 저장되었습니다.")
+    print(f"Confusion Matrix: '{save_path}'")
+
+
+def print_classification_report(y_true, y_pred, classes):
+    """
+    분류 성능 리포트 출력
+    
+    Args:
+        y_true: 실제 레이블
+        y_pred: 예측 레이블
+        classes: 클래스 이름 딕셔너리
+    """
+    target_names = [classes[i] for i in range(len(classes))]
+    report = classification_report(y_true, y_pred, target_names=target_names)
+    
+    print("\n" + "=" * 60)
+    print("classification_report")
+    print("=" * 60)
+    print(report)
+
+
+def visualize_predictions(model, dataloader, device, classes, save_path, num_images=20):
+    """
+    예측 결과 시각화
+    
+    Args:
+        model: 모델
+        dataloader: 데이터로더
+        device: 디바이스
+        classes: 클래스 이름
+        save_path: 저장 경로
+        num_images: 표시할 이미지 개수
+    """
+    model.eval()
+    
+    images_shown = 0
+    fig = plt.figure(figsize=(15, 8))
+    
+    with torch.no_grad():
+        for inputs, labels in dataloader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            
+            # 배치의 이미지들을 표시
+            for i in range(inputs.size(0)):
+                if images_shown >= num_images:
+                    break
+                
+                ax = plt.subplot(4, 5, images_shown + 1)
+                
+                # 이미지 표시 (정규화 해제)
+                img = inputs[i].cpu().numpy()[0]
+                plt.imshow(img, cmap='gray')
+                
+                # 제목 설정 (정답 여부에 따라 색상 변경)
+                true_label = classes[labels[i].item()]
+                pred_label = classes[preds[i].item()]
+                
+                if labels[i] == preds[i]:
+                    color = 'green'
+                    title = f'✓ True: {true_label}\nPred: {pred_label}'
+                else:
+                    color = 'red'
+                    title = f'✗ True: {true_label}\nPred: {pred_label}'
+                
+                plt.title(title, color=color, fontsize=9)
+                plt.axis('off')
+                
+                images_shown += 1
+            
+            if images_shown >= num_images:
+                break
+    
+    plt.suptitle('MNIST Predictions (Green=Correct, Red=Wrong)', fontsize=14)
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.show()
+    
+    print(f"visualize_predictions '{save_path}'")
