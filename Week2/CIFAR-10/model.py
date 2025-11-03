@@ -1,14 +1,13 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
 # ======================================================
-# 실험 1: 기본 모델 / BatchSize 비교 (64, 128, 1024)
+# 실험 1: 기본 모델
 # ======================================================
 class SimpleCNN(nn.Module):
     """
-    MNIST 분류를 위한 간단한 CNN 모델
+    CIFAR-10 분류를 위한 간단한 CNN 모델
     
     구조:
     - Conv1: 1채널 → 32채널, 3x3 필터
@@ -20,17 +19,17 @@ class SimpleCNN(nn.Module):
     def __init__(self, num_classes=10):
         super(SimpleCNN, self).__init__() # nn.Module 초기화
 
-        # 첫 번째 합성곱 레이어
+        # 첫 번째 합성곱 레이어 (지역적 특징 추출)
         self.conv1 = nn.Conv2d(
-            in_channels=1,    # 입력: 흑백 이미지 (1채널)
+            in_channels=3,    # 입력: 3채널
             out_channels=32,  # 출력: 32개 필터
             kernel_size=3,    # 3x3 필터
             stride=1,         # 이동 간격 1
             padding=1         # 패딩 1 (크기 유지)
         )
-        self.bn1 = nn.BatchNorm2d(32)  # 배치 정규화 (학습 안정화)
-        self.relu1 = nn.ReLU()  # 활성화 함수
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)  # 2x2 맥스풀링 (크기 절반)
+        self.bn1 = nn.BatchNorm2d(32)  # 배치 정규화 (학습 안정화, 수렴 속도 향상)
+        self.relu1 = nn.ReLU()  # 활성화 함수(비선형성추가, 복잡한 패턴 학습 가능)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)  # 2x2 맥스풀링 (크기 절반, 주요 특징 추출)
         
         # 두 번째 합성곱 레이어
         self.conv2 = nn.Conv2d(
@@ -45,18 +44,18 @@ class SimpleCNN(nn.Module):
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         # 완전 연결 레이어
-        # 입력 크기 계산: 28 → 14 (pool1) → 7 (pool2)
-        # 64채널 × 7 × 7 = 3136
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        # 입력 크기 계산: 32 → 16 (pool1) → 8 (pool2)
+        # 64채널 × 8 × 8 = 4096
+        self.fc1 = nn.Linear(64 * 8 * 8, 128) # 완전 연결 레이어: 추출된 특징 요약, 분류기로 연결
         self.relu3 = nn.ReLU()
         self.dropout = nn.Dropout(0.5)  # 드롭아웃 (과적합 방지)
-        self.fc2 = nn.Linear(128, num_classes)
+        self.fc2 = nn.Linear(128, num_classes)  # 최종 출력 레이어
 
     def forward(self, x):
         """
         순전파 (Forward Pass)
             Args:
-                x: 입력 이미지 (batch_size, 1, 28, 28)
+                x: 입력 이미지 (batch_size, 3, 32, 32)
             Returns:
                 out: 클래스별 점수 (batch_size, 10)
         """
@@ -90,7 +89,7 @@ class SimpleCNN(nn.Module):
 class SimpleCNN_Sigmoid(nn.Module):
     def __init__(self, num_classes=10):
         super(SimpleCNN_Sigmoid, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(32)
         self.act1 = nn.Sigmoid()
         self.pool1 = nn.MaxPool2d(2, 2)
@@ -98,7 +97,7 @@ class SimpleCNN_Sigmoid(nn.Module):
         self.bn2 = nn.BatchNorm2d(64)
         self.act2 = nn.Sigmoid()
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc1 = nn.Linear(64 * 8 * 8, 128)
         self.act3 = nn.Sigmoid()
         self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(128, num_classes)
@@ -119,7 +118,7 @@ class SimpleCNN_Sigmoid(nn.Module):
 class SimpleCNN_Tanh(nn.Module):
     def __init__(self, num_classes=10):
         super(SimpleCNN_Tanh, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(32)
         self.act1 = nn.Tanh()
         self.pool1 = nn.MaxPool2d(2, 2)
@@ -127,7 +126,7 @@ class SimpleCNN_Tanh(nn.Module):
         self.bn2 = nn.BatchNorm2d(64)
         self.act2 = nn.Tanh()
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc1 = nn.Linear(64 * 8 * 8, 128)
         self.act3 = nn.Tanh()
         self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(128, num_classes)
@@ -148,14 +147,14 @@ class SimpleCNN_Tanh(nn.Module):
 class SimpleCNN_Dropout(nn.Module):
     def __init__(self, dropout_p=0.5, num_classes=10):
         super(SimpleCNN_Dropout, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(32)
         self.relu1 = nn.ReLU()
         self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
         self.bn2 = nn.BatchNorm2d(64)
         self.relu2 = nn.ReLU()
         self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc1 = nn.Linear(64 * 8 * 8, 128)
         self.relu3 = nn.ReLU()
         self.dropout = nn.Dropout(dropout_p)
         self.fc2 = nn.Linear(128, num_classes)
@@ -176,7 +175,7 @@ class SimpleCNN_Dropout(nn.Module):
 class SimpleCNN_Overlapping(nn.Module):
     def __init__(self, num_classes=10):
         super(SimpleCNN_Overlapping, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(32)
         self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=3, stride=2)
@@ -184,7 +183,7 @@ class SimpleCNN_Overlapping(nn.Module):
         self.bn2 = nn.BatchNorm2d(64)
         self.relu2 = nn.ReLU()
         self.pool2 = nn.MaxPool2d(kernel_size=3, stride=2)
-        self.fc1 = nn.Linear(64 * 6 * 6, 128)
+        self.fc1 = nn.Linear(64 * 8 * 8, 128)
         self.relu3 = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(128, num_classes)
@@ -205,14 +204,14 @@ class SimpleCNN_Overlapping(nn.Module):
 class SimpleCNN_LRN(nn.Module):
     def __init__(self, num_classes=10):
         super(SimpleCNN_LRN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
         self.lrn1 = nn.LocalResponseNorm(5, alpha=1e-4, beta=0.75, k=2)
         self.relu1 = nn.ReLU()
         self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
         self.lrn2 = nn.LocalResponseNorm(5, alpha=1e-4, beta=0.75, k=2)
         self.relu2 = nn.ReLU()
         self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc1 = nn.Linear(64 * 8 * 8, 128)
         self.relu3 = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(128, num_classes)
@@ -237,7 +236,7 @@ def count_parameters(model):
     """
     return sum(p.numel() for p in model.parameters() if p.requires_grad) # requires_grad=True만 합산
 
-def create_model(device, num_classes=10):
+def create_model(model_name="SimpleCNN", device="cuda", num_classes=10):
     """
     모델 생성 및 초기화
         Args:
@@ -246,14 +245,14 @@ def create_model(device, num_classes=10):
         Returns:
             model: 초기화된 모델
     """
-# 모델 목록
-# SimpleCNN
-# SimpleCNN_Sigmoid
-# SimpleCNN_Tanh
-# SimpleCNN_Dropout
-# SimpleCNN_Overlapping
-# SimpleCNN_LRN
-# /home/user3/miniconda3/envs/DL_basic/bin/python /home/user3/AI_internship/Week2/MNIST/main.py
-    model = SimpleCNN_Dropout(num_classes=num_classes).to(device)
-    print(f'Trainable parameters: {count_parameters(model):,}')
+    models = {
+        "SimpleCNN": SimpleCNN,
+        "Sigmoid": SimpleCNN_Sigmoid,
+        "Tanh": SimpleCNN_Tanh,
+        "Dropout": SimpleCNN_Dropout,
+        "Overlapping": SimpleCNN_Overlapping,
+        "LRN": SimpleCNN_LRN,
+    }
+    model = models[model_name](num_classes=num_classes).to(device)
+    print(f"Trainable parameters: {count_parameters(model):,}")
     return model

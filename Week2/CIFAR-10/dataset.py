@@ -1,48 +1,33 @@
+import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
 from sklearn.model_selection import train_test_split
+import pickle
 
-class MNISTDataset(Dataset):
+class CIFAR10Dataset(Dataset):
     """데이터셋 구성 및 라벨링"""
 
     def __init__(self, images, labels, transform=None, phase='train'):
-        """
-        Args:
-            images: numpy 배열 형태의 이미지 데이터 (N, 28, 28)
-            labels: numpy 배열 형태의 레이블 (N,)
-            transform: 이미지 변환 함수
-            phase: 'train' 또는 'val' (데이터 증강 여부 결정)
-        """
-        self.images = images
+        self.images = images  # (N, 32, 32, 3)
         self.labels = labels
         self.transform = transform
         self.phase = phase
-    
 
     def __len__(self):
-        """데이터셋 크기 반환"""
         return len(self.images)
 
     def __getitem__(self, index):
-        """
-        주어진 인덱스의 데이터를 반환
-        
-        Returns:
-            image: 변환된 이미지 텐서 (1, 28, 28)
-            label: 레이블 텐서
-        """
-        # 이미지와 레이블 가져오기
-        image = self.images[index]  # (28, 28)
+        image = self.images[index]  # (32, 32, 3)
         label = self.labels[index]
         
-        # 이미지 정규화: 0~255 범위를 0~1로 변환
+        # 정규화: 0~255 → 0~1
         image = image.astype(np.float32) / 255.0
         
-        # 채널 차원 추가: (28, 28) → (1, 28, 28)
-        image = np.expand_dims(image, axis=0)
+        # (H, W, C) → (C, H, W)
+        image = image.transpose(2, 0, 1)
         
-        # numpy 배열을 PyTorch 텐서로 변환
+        # numpy → tensor
         image = torch.from_numpy(image)
         label = torch.tensor(label, dtype=torch.long)
 
@@ -51,12 +36,12 @@ class MNISTDataset(Dataset):
             
         return image, label
 
-def load_mnist_data(data_path, val_size=0.2, random_state=42):
+def load_cifar10_data(data_path, val_size=0.2, random_state=42):
     """
-    MNIST 데이터를 로드하고 train/val/test로 분할
+    CIFAR-10 데이터를 로드하고 train/val/test로 분할
     
     Args:
-        data_path: mnist.npz 파일 경로
+        data_dir: cifar-10-batches-py 폴더 경로
         val_size: 검증 데이터 비율
         random_state: 랜덤 시드
     
@@ -65,23 +50,39 @@ def load_mnist_data(data_path, val_size=0.2, random_state=42):
         x_val, y_val: 검증 데이터
         x_test, y_test: 테스트 데이터
     """
-    # npz 파일 로드
-    data = np.load(data_path)
+    # 훈련 데이터 로드 (5개 배치)
+    x_train_list = []
+    y_train_list = []
     
-    # 훈련 데이터와 테스트 데이터 분리
-    x_train_full = data['x_train']  # (60000, 28, 28)
-    y_train_full = data['y_train']  # (60000,)
-    x_test = data['x_test']         # (10000, 28, 28)
-    y_test = data['y_test']         # (10000,)
+    for i in range(1, 6):
+        file_path = os.path.join(data_path, f'data_batch_{i}')
+        with open(file_path, 'rb') as f:
+            batch = pickle.load(f, encoding='bytes')
+            x_train_list.append(batch[b'data'])
+            y_train_list.append(batch[b'labels'])
     
-    print(f"원본 훈련 데이터: {x_train_full.shape}")
-    print(f"원본 테스트 데이터: {x_test.shape}")
+    x_train_full = np.concatenate(x_train_list)  # (50000, 3072)
+    y_train_full = np.concatenate(y_train_list)  # (50000,)
+    
+    # 테스트 데이터 로드
+    test_file = os.path.join(data_path, 'test_batch')
+    with open(test_file, 'rb') as f:
+        test_batch = pickle.load(f, encoding='bytes')
+        x_test = test_batch[b'data']  # (10000, 3072)
+        y_test = np.array(test_batch[b'labels'])  # (10000,)
+    
+    # 데이터 reshape: (N, 3072) → (N, 3, 32, 32) → (N, 32, 32, 3)
+    x_train_full = x_train_full.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+    x_test = x_test.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+    
+    print(f"원본 훈련 데이터: {x_train_full.shape}")  # (50000, 32, 32, 3)
+    print(f"원본 테스트 데이터: {x_test.shape}")     # (10000, 32, 32, 3)
     
     # 훈련 데이터를 train/validation으로 분할
     x_train, x_val, y_train, y_val = train_test_split(
         x_train_full, y_train_full,
         test_size=val_size,
-        stratify=y_train_full,  # 클래스 비율 유지
+        stratify=y_train_full,
         random_state=random_state
     )
     

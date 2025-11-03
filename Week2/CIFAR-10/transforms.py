@@ -1,12 +1,8 @@
 from torchvision import transforms
 
-class MNISTTransform:
-    """
-    MNIST 이미지 전처리 클래스
-    - train: 데이터 증강 적용
-    - val: 변환 없이 정규화만 적용
-    """
-    
+class CIFARTransform:
+    """CIFAR-10 이미지 전처리 클래스"""
+
     def __init__(self, mean, std):
         """
         Args:
@@ -23,6 +19,14 @@ class MNISTTransform:
                 translate=(0.1, 0.1),  # 좌우/상하로 10% 이동
                 scale=(0.9, 1.1)  # 90%~110% 크기 변환
             ),
+            transforms.RandomHorizontalFlip(p=0.5),  # 좌우 반전
+            transforms.RandomCrop(32, padding=4),    # 랜덤 크롭
+            transforms.ColorJitter(                  # 색상 변화
+                brightness=0.2,
+                contrast=0.2,
+                saturation=0.2,
+                hue=0.1
+            ),
             transforms.Normalize(mean, std)  # 정규화
         ])
         
@@ -32,16 +36,6 @@ class MNISTTransform:
         ])
     
     def __call__(self, image, phase='train'):
-        """
-        이미지에 변환 적용
-        
-        Args:
-            image: 입력 이미지 텐서 (1, 28, 28)
-            phase: 'train' 또는 'val'
-        
-        Returns:
-            변환된 이미지 텐서
-        """
         if phase == 'train':
             return self.train_transform(image)
         else:

@@ -20,6 +20,7 @@ env/
 
 # ===== 학습 로그 / 결과 =====
 runs/
+logs/
 result/
 events.out.tfevents.*
 *.log

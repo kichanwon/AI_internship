@@ -14,12 +14,8 @@ from dataset import load_mnist_data
 from dataloader import create_dataloaders, get_test_dataloader
 from model import create_model
 from trainer import train_model
-from evaluator import (
-    evaluate_model,
-    plot_confusion_matrix,
-    print_classification_report,
-    visualize_predictions
-)
+from evaluator import evaluate_model
+
 def main():
     """메인 실행 함수"""
     
@@ -54,7 +50,15 @@ def main():
 
     # 3. 모델 생성
     print("\n[3단계] 모델 생성 중...")
-    model = create_model(config.DEVICE, config.NUM_CLASSES)
+    # models = {
+    #     "SimpleCNN": SimpleCNN,
+    #     "Sigmoid": SimpleCNN_Sigmoid,
+    #     "Tanh": SimpleCNN_Tanh,
+    #     "Dropout": SimpleCNN_Dropout,
+    #     "Overlapping": SimpleCNN_Overlapping,
+    #     "LRN": SimpleCNN_LRN,
+    # }
+    model = create_model("SimpleCNN", config.DEVICE, config.NUM_CLASSES)
     
     # 4. 손실 함수 및 옵티마이저 설정
     print("\n[4단계] 학습 설정 중...")
@@ -102,24 +106,7 @@ def main():
     print(f"최고 검증 정확도: {best_val_acc:.4f} ({best_val_acc*100:.2f}%)")
     print(f"테스트 정확도: {test_acc:.4f} ({test_acc*100:.2f}%)")
     print(f"{'='*60}")
-    
-    # 8. 혼동 행렬 생성
-    print("\n[8단계] 혼동 행렬 생성 중...")
-    cm_path = os.path.join(config.RESULT_DIR, "confusion_matrix.png")
-    plot_confusion_matrix(y_true, y_pred, config.CLASSES, cm_path)
-    
-    # 9. 분류 리포트 출력
-    print_classification_report(y_true, y_pred, config.CLASSES)
-    
-    # 10. 예측 결과 시각화
-    print("\n[9단계] 예측 결과 시각화 중...")
-    vis_path = os.path.join(config.RESULT_DIR, "predictions_visualization.png")
-    visualize_predictions(
-        trained_model, test_dataloader, config.DEVICE,
-        config.CLASSES, vis_path, num_images=20
-    )
-        
-    print("=" * 60)
+
     print("Fin")
     print(f"'{config.RESULT_DIR}'")
 
