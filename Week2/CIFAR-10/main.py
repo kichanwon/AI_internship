@@ -10,7 +10,7 @@ import os
 
 # 사용자 정의 모듈 import
 import config
-from dataset import load_mnist_data
+from dataset import load_cifar10_data
 from dataloader import create_dataloaders, get_test_dataloader
 from model import create_model
 from trainer import train_model
@@ -24,7 +24,7 @@ def main():
     
     # 1. 데이터 로드
     print("\n[1단계] 데이터 로드 중...")
-    x_train, y_train, x_val, y_val, x_test, y_test = load_mnist_data(
+    x_train, y_train, x_val, y_val, x_test, y_test = load_cifar10_data(
         config.DATA_PATH,
         val_size=config.VAL_SIZE,
         random_state=config.RANDOM_STATE
@@ -57,8 +57,9 @@ def main():
     #     "Dropout": SimpleCNN_Dropout,
     #     "Overlapping": SimpleCNN_Overlapping,
     #     "LRN": SimpleCNN_LRN,
+    #     "ImprovedCNN":ImprovedCNN
     # }
-    model = create_model("SimpleCNN", config.DEVICE, config.NUM_CLASSES)
+    model = create_model("ImprovedCNN", config.DEVICE, config.NUM_CLASSES)
     
     # 4. 손실 함수 및 옵티마이저 설정
     print("\n[4단계] 학습 설정 중...")
@@ -88,11 +89,12 @@ def main():
         config.NUM_EPOCHS, config.DEVICE, config.TENSORBOARD_LOG_DIR
     )
 
-    # 6. 최고 성능 모델 저장
-    print("\n[6단계] 모델 저장 중...")
-    model_path = os.path.join(config.RESULT_DIR, "best_mnist_model.pth")
-    torch.save(trained_model.state_dict(), model_path)
-    print(f"model_path: '{model_path}'")
+    # # 6. 최고 성능 모델 저장
+    # print("\n[6단계] 모델 저장 중...")
+    # # model_path = os.path.join(config.RESULT_DIR, "best_mnist_model.pth")
+    # model_path = os.path.join(config.RESULT_DIR, "best_cifar10_model.pth")
+    # torch.save(trained_model.state_dict(), model_path)
+    # print(f"model_path: '{model_path}'")
     
     # 7. 테스트 데이터 평가
     print("\n[7단계] 테스트 데이터 평가 중...")

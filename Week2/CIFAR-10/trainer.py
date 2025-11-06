@@ -27,8 +27,8 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
     optimizer_name = optimizer.__class__.__name__
     model_name = model.__class__.__name__
     experiment_name = (
-        f"mnist_cnn/"  # 프로젝트 레벨
-        f"{model_name}/"  # 모델 레벨
+        f"cifar-10/"  # 프로젝트 레벨
+        f"{model_name}-relu/"  # 모델 레벨
         f"{optimizer_name}/"  # 옵티마이저 레벨
         f"lr{config.LEARNING_RATE}_bs{config.BATCH_SIZE}_{timestamp}_"  # 실험 상세
     )

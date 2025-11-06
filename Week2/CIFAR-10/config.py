@@ -3,7 +3,6 @@ import os
 
 # 디바이스 설정
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # CUDA 사용 가능 시 첫 번째 GPU, 아니면 CPU 선택
-print(f"Using device: {DEVICE}")
 
 # 디렉토리 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # 현재 파일 기준 디렉토리
@@ -14,8 +13,7 @@ os.makedirs(TENSORBOARD_LOG_DIR, exist_ok=True)  # 로그 폴더 생성
 
 
 # 데이터 경로
-# DATA_PATH = '../data/mnist.npz' # 실행하는 터미널 기준임!!
-DATA_PATH = os.path.join(os.path.expanduser('~'), 'cifar-python', 'cifar-10-batches-py')
+DATA_PATH = '/home/user3/data/cifar-python/cifar-10-batches-py'
 
 if os.path.exists(DATA_PATH):
     print(f"데이터 파일 발견: {DATA_PATH}")
@@ -37,7 +35,7 @@ ADAM_WEIGHT_DECAY = 0.0  # L2 정규화
 
 # 학습 하이퍼파라미터
 BATCH_SIZE = 64  # 한 번에 처리할 데이터 개수
-NUM_EPOCHS = 10   # 전체 데이터를 몇 번 반복 학습할지
+NUM_EPOCHS = 50   # 전체 데이터를 몇 번 반복 학습할지
 LEARNING_RATE = 0.001  # 학습률 (가중치 업데이트 크기)
 # MOMENTUM = 0.9   # SGD 옵티마이저의 모멘텀
 
@@ -55,4 +53,4 @@ CLASSES = {
 
 
 # =========================================
-# tensorboard --logdir=Week2/MNIST/logs --port=6006
+# tensorboard --logdir=Week2/logs --port=6006

@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 
 # ======================================================
-# 실험 1: 기본 모델
+# 실험: 기본 모델
 # ======================================================
 class SimpleCNN(nn.Module):
     """
@@ -60,13 +60,13 @@ class SimpleCNN(nn.Module):
                 out: 클래스별 점수 (batch_size, 10)
         """
         # Conv1 블록
-        out = self.conv1(x)       # (B, 1, 28, 28) → (B, 32, 28, 28)
+        out = self.conv1(x)       # (B, 32, 28, 28)
         out = self.bn1(out)
         out = self.relu1(out)  # 모듈을 "호출" (클래스 인스턴스)
-        out = self.pool1(out)     # (B, 32, 28, 28) → (B, 32, 14, 14)
+        out = self.pool1(out)     # (B, 32, 14, 14)
         
         # Conv2 블록
-        out = self.conv2(out)     # (B, 32, 14, 14) → (B, 64, 14, 14)
+        out = self.conv2(out)     # (B, 64, 14, 14)
         out = self.bn2(out)
         out = self.relu2(out)
         out = self.pool2(out)     # (B, 64, 14, 14) → (B, 64, 7, 7)
@@ -89,11 +89,11 @@ class SimpleCNN(nn.Module):
 class SimpleCNN_Sigmoid(nn.Module):
     def __init__(self, num_classes=10):
         super(SimpleCNN_Sigmoid, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(32)
         self.act1 = nn.Sigmoid()
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, 3, stride=1, padding=1)
         self.bn2 = nn.BatchNorm2d(64)
         self.act2 = nn.Sigmoid()
         self.pool2 = nn.MaxPool2d(2, 2)
@@ -118,11 +118,11 @@ class SimpleCNN_Sigmoid(nn.Module):
 class SimpleCNN_Tanh(nn.Module):
     def __init__(self, num_classes=10):
         super(SimpleCNN_Tanh, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, 3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(32)
         self.act1 = nn.Tanh()
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, 3, stride=1, padding=1)
         self.bn2 = nn.BatchNorm2d(64)
         self.act2 = nn.Tanh()
         self.pool2 = nn.MaxPool2d(2, 2)
@@ -139,6 +139,82 @@ class SimpleCNN_Tanh(nn.Module):
         x = self.dropout(x)
         x = self.fc2(x)
         return x
+
+
+# ======================================================
+# 실험 3: 활성화 함수 레이어 추가 비교 (nn.Sequential)
+# ======================================================
+class ImprovedCNN(nn.Module):
+    def __init__(self, num_classes=10,activationFn='relu'):
+        super(ImprovedCNN, self).__init__()
+
+        if activationFn=='relu':
+            self.activation = nn.ReLU()
+        elif activationFn=='tanh':
+            self.activation = nn.Tanh()
+        elif activationFn=='sigmoid':
+            self.activation = nn.Sigmoid()
+        else:
+            raise ValueError("Unsupported activation function")
+
+        # Feature extractor
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 32, 3, padding=1),
+            nn.BatchNorm2d(32),
+            self.activation,
+
+            nn.Conv2d(32, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            self.activation,
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(64, 128, 3, padding=1),
+            nn.BatchNorm2d(128),
+            self.activation,
+
+            nn.Conv2d(128, 128, 3, padding=1),
+            nn.BatchNorm2d(128),
+            self.activation,
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(128, 256, 3, padding=1),
+            nn.BatchNorm2d(256),
+            self.activation,
+
+            nn.Conv2d(256, 256, 3, padding=1),
+            nn.BatchNorm2d(256),
+            self.activation,
+            nn.MaxPool2d(2, 2)
+        )
+
+        # Classifier
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(256 * 4 * 4, 256),
+            self.activation,
+            nn.Dropout(0.5),
+            nn.Linear(256, num_classes)
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # ======================================================
@@ -252,6 +328,7 @@ def create_model(model_name="SimpleCNN", device="cuda", num_classes=10):
         "Dropout": SimpleCNN_Dropout,
         "Overlapping": SimpleCNN_Overlapping,
         "LRN": SimpleCNN_LRN,
+        "ImprovedCNN":ImprovedCNN
     }
     model = models[model_name](num_classes=num_classes).to(device)
     print(f"Trainable parameters: {count_parameters(model):,}")

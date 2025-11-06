@@ -34,6 +34,8 @@ class CIFAR10Dataset(Dataset):
         if self.transform:
             image = self.transform(image, self.phase)
             
+        # label = torch.tensor(label, dtype=torch.long)
+
         return image, label
 
 def load_cifar10_data(data_path, val_size=0.2, random_state=42):
