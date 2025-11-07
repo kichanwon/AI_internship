@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-
+import config
 
 # ======================================================
 # 실험: 기본 모델
@@ -145,9 +145,9 @@ class SimpleCNN_Tanh(nn.Module):
 # 실험 3: 활성화 함수 레이어 추가 비교 (nn.Sequential)
 # ======================================================
 class ImprovedCNN(nn.Module):
-    def __init__(self, num_classes=10,activationFn='relu'):
+    def __init__(self, num_classes=10,activationFn='tanh'):
         super(ImprovedCNN, self).__init__()
-
+        activationFn=config.ACTIVATION_FUNCTION
         if activationFn=='relu':
             self.activation = nn.ReLU()
         elif activationFn=='tanh':

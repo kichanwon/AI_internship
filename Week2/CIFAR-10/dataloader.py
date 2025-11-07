@@ -24,8 +24,8 @@ def create_dataloaders(x_train, y_train, x_val, y_val, mean, std, batch_size):
     val_dataset = CIFAR10Dataset(x_val, y_val, transform=transform, phase='val')
     
     # 데이터로더 생성
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,pin_memory=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,pin_memory=True)
     
     dataloader_dict = {'train': train_dataloader, 'val': val_dataloader}
     
@@ -47,6 +47,6 @@ def get_test_dataloader(x_test, y_test, mean, std, batch_size=64):
     transform = CIFARTransform(mean, std)
     test_dataset = CIFAR10Dataset(x_test, y_test, transform=transform, phase='val') # phase='val'로 고정
 
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,pin_memory=True)
     
     return test_dataloader

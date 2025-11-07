@@ -22,12 +22,12 @@ class CIFARTransform:
             # ),
             transforms.RandomHorizontalFlip(p=0.5),  # 좌우 반전
             transforms.RandomCrop(32, padding=4),    # 랜덤 크롭
-            transforms.ColorJitter(                  # 색상 변화
-                brightness=0.2,
-                contrast=0.2,
-                saturation=0.2,
-                hue=0.1
-            ),
+            # transforms.ColorJitter(                  # 색상 변화
+            #     brightness=0.2,
+            #     contrast=0.2,
+            #     saturation=0.2,
+            #     hue=0.1
+            # ),
             # transforms.ToTensor(),
             transforms.Normalize(mean, std)  # 정규화
         ])

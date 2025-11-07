@@ -27,13 +27,14 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
     optimizer_name = optimizer.__class__.__name__
     model_name = model.__class__.__name__
     experiment_name = (
-        f"cifar-10/"  # 프로젝트 레벨
-        f"{model_name}-relu/"  # 모델 레벨
-        f"{optimizer_name}/"  # 옵티마이저 레벨
-        f"lr{config.LEARNING_RATE}_bs{config.BATCH_SIZE}_{timestamp}_"  # 실험 상세
+        f"cifar-10/"
+        f"{model_name}/"
+        f"activation-{config.ACTIVATION_FUNCTION}/"
+        f"optimizer-{optimizer_name}/"
+        f"lr{config.LEARNING_RATE}_bs{config.BATCH_SIZE}_ep{config.NUM_EPOCHS}/"
+        f"{timestamp}/"
     )
     writer = SummaryWriter(os.path.join(log_dir, experiment_name))
-    
     print(f"log saved: {writer.log_dir}")
     print(f"tensorboard --logdir={log_dir}")
 
