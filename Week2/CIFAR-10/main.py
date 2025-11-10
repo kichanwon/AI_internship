@@ -25,9 +25,11 @@ def main():
     random.seed(config.RANDOM_STATE)
     np.random.seed(config.RANDOM_STATE)
     torch.manual_seed(config.RANDOM_STATE)
-    torch.cuda.manual_seed_all(config.RANDOM_STATE)
+    torch.cuda.manual_seed(config.RANDOM_STATE)
+    # torch.cuda.manual_seed_all(config.RANDOM_STATE) # 멀티 GPU 사용 시
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+    
     print(f"Random seed set to {config.RANDOM_STATE} for reproducibility")
     # 디바이스 설정
     print(f"Using device: {config.DEVICE}")

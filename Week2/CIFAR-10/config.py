@@ -37,8 +37,8 @@ ADAM_WEIGHT_DECAY = 0.0  # L2 정규화
 ACTIVATION_FUNCTION = 'tanh'  # 'relu', 'tanh'
 
 # 학습 하이퍼파라미터
-BATCH_SIZE = 64  # 한 번에 처리할 데이터 개수
-NUM_EPOCHS = 50   # 전체 데이터를 몇 번 반복 학습할지
+BATCH_SIZE = 512  # 한 번에 처리할 데이터 개수
+NUM_EPOCHS = 100   # 전체 데이터를 몇 번 반복 학습할지
 LEARNING_RATE = 0.005  # 학습률 (가중치 업데이트 크기)
 # MOMENTUM = 0.9   # SGD 옵티마이저의 모멘텀
 
