@@ -3,6 +3,8 @@
 MNIST 손글씨 숫자 분류 - 메인 실행 스크립트
 """
 
+import random
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -18,7 +20,15 @@ from evaluator import evaluate_model
 
 def main():
     """메인 실행 함수"""
-    
+
+    # 재현성을 위한 랜덤 시드 설정
+    random.seed(config.RANDOM_STATE)
+    np.random.seed(config.RANDOM_STATE)
+    torch.manual_seed(config.RANDOM_STATE)
+    torch.cuda.manual_seed_all(config.RANDOM_STATE)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    print(f"Random seed set to {config.RANDOM_STATE} for reproducibility")
     # 디바이스 설정
     print(f"Using device: {config.DEVICE}")
     
