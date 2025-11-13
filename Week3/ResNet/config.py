@@ -15,8 +15,8 @@ os.makedirs(TENSORBOARD_LOG_DIR, exist_ok=True)  # 로그 폴더 생성
 
 # WandB 설정
 WANDB_ENABLED = True  # WandB 사용 여부
-# WANDB_ENTITY = "your-team-name"  # WandB 팀 이름 (개인 계정이면 None)
-WANDB_PROJECT = "ResNet_implement"  # 프로젝트 이름
+WANDB_ENTITY = "wgichan-kku"  # WandB 팀 이름 (개인 계정이면 None)
+WANDB_PROJECT = "resnet"  # 프로젝트 이름
 
 # 데이터 경로
 DATA_PATH = '/home/user3/data/cifar-python/cifar-10-batches-py'
@@ -40,7 +40,7 @@ ADAM_WEIGHT_DECAY = 0.0  # L2 정규화
 # =========================================
 
 # 활성화 함수 설정
-ACTIVATION_FUNCTION = 'tanh'  # 'relu', 'tanh'
+ACTIVATION_FUNCTION = 'relu'  # 'relu', 'tanh'
 
 # 학습 하이퍼파라미터
 BATCH_SIZE = 512  # 한 번에 처리할 데이터 개수

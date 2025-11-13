@@ -4,8 +4,9 @@ import config
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 import os
-import wandb
-
+if config.WANDB_ENABLED:
+    import wandb
+    
 def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device, log_dir):
     """
     모델 학습 함수

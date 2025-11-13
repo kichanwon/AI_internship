@@ -16,7 +16,7 @@ from dataset import load_cifar10_data
 from dataloader import create_dataloaders, get_test_dataloader
 from model import create_model
 from trainer import train_model
-from evaluator import evaluate_model
+from evaluator import evaluate_model,create_confusion_matrix,print_classification_report
 
 def main():
     """메인 실행 함수"""
@@ -63,15 +63,14 @@ def main():
     # 3. 모델 생성
     print("\n[3단계] 모델 생성 중...")
     # models = {
-    #     "SimpleCNN": SimpleCNN,
-    #     "Sigmoid": SimpleCNN_Sigmoid,
-    #     "Tanh": SimpleCNN_Tanh,
-    #     "Dropout": SimpleCNN_Dropout,
-    #     "Overlapping": SimpleCNN_Overlapping,
-    #     "LRN": SimpleCNN_LRN,
-    #     "ImprovedCNN":ImprovedCNN
+        # "ImprovedCNN": ImprovedCNN
+        # "ResNet18": ResNet18
+        # "ResNet34": ResNet34
+        # "ResNet50": ResNet50
+        # "ResNet101": ResNet101
+        # "ResNet152": ResNet152
     # }
-    model = create_model("ImprovedCNN", config.DEVICE, config.NUM_CLASSES)
+    model = create_model("ResNet50", config.DEVICE, config.NUM_CLASSES)
     
     # 4. 손실 함수 및 옵티마이저 설정
     print("\n[4단계] 학습 설정 중...")
@@ -113,6 +112,28 @@ def main():
     test_acc, y_pred, y_true = evaluate_model(
         trained_model, test_dataloader, config.DEVICE
     )
+
+    # 8. 혼동행렬 생성
+    print("\n[8단계] 혼동행렬 생성 중...")
+    class_names = [config.CLASSES[i] for i in range(config.NUM_CLASSES)]
+    cm, true_labels, pred_labels = create_confusion_matrix(
+        trained_model, 
+        test_dataloader, 
+        config.DEVICE,
+        class_names=class_names,
+        save_path=os.path.join(config.RESULT_DIR, "confusion_matrix.png")
+    )
+    
+    # 9. 분류 리포트 출력
+    print_classification_report(true_labels, pred_labels, class_names)
+        
+    print(f"\n{'='*60}")
+    print(f"최종 결과")
+    print(f"{'='*60}")
+    print(f"최고 검증 정확도: {best_val_acc:.4f} ({best_val_acc*100:.2f}%)")
+    print(f"테스트 정확도: {test_acc:.4f} ({test_acc*100:.2f}%)")
+    print(f"{'='*60}")
+
         
     print(f"\n{'='*60}")
     print(f"최종 결과")
