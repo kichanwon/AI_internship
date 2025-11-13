@@ -4,6 +4,7 @@ import config
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 import os
+import wandb
 
 def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device, log_dir):
     """
@@ -37,6 +38,29 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
     writer = SummaryWriter(os.path.join(log_dir, experiment_name))
     print(f"log saved: {writer.log_dir}")
     print(f"tensorboard --logdir={log_dir}")
+
+    # WandB 초기화
+    if config.WANDB_ENABLED:
+            wandb_run = wandb.init(
+                entity=config.WANDB_ENTITY if hasattr(config, 'WANDB_ENTITY') else None,
+                project=config.WANDB_PROJECT if hasattr(config, 'WANDB_PROJECT') else "cifar10-experiments",
+                name=f"{model_name}_{config.ACTIVATION_FUNCTION}_{timestamp}",
+                config={
+                    "learning_rate": config.LEARNING_RATE,
+                    "architecture": model_name,
+                    "activation": config.ACTIVATION_FUNCTION,
+                    "dataset": "CIFAR-10",
+                    "epochs": num_epochs,
+                    "batch_size": config.BATCH_SIZE,
+                    "optimizer": optimizer_name,
+                    "adam_betas": config.ADAM_BETAS,
+                    "weight_decay": config.ADAM_WEIGHT_DECAY,
+                },
+                tags=[model_name, config.ACTIVATION_FUNCTION, optimizer_name]
+            )
+            # 모델 구조를 WandB에 기록
+            wandb.watch(model, criterion, log="all", log_freq=100)
+            print(f"WandB run initialized: {wandb_run.name}")
 
 
     since = time.time() # 학습 시작 시간 기록
@@ -87,8 +111,12 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
                         scaler.scale(loss).backward()
                         scaler.step(optimizer) # epoch / step
                         scaler.update()
-
                         writer.add_scalar('Batch/Train_Loss', loss.item(), global_step)
+
+                        # WandB에 배치별 손실 기록
+                        if config.WANDB_ENABLED:
+                            wandb.log({"batch_train_loss": loss.item()}, step=global_step)
+
                         global_step += 1
 
                 # GPU 메모리 사용량 기록          
@@ -106,21 +134,34 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
             if phase == 'train':
                 train_loss_list.append(running_loss)
                 train_acc_list.append(running_acc.item())
-                
                 # 스칼라 기록
                 writer.add_scalar('Epoch/Train_Loss', running_loss, epoch)
                 writer.add_scalar('Epoch/Train_Accuracy', running_acc, epoch)
-                
                 # 학습률 기록
                 current_lr = optimizer.param_groups[0]['lr']
                 writer.add_scalar('Epoch/Learning_Rate', current_lr, epoch)
+                # WandB에 기록
+                if config.WANDB_ENABLED:
+                    wandb.log({
+                        "epoch": epoch + 1,
+                        "train_loss": running_loss,
+                        "train_accuracy": running_acc.item(),
+                        "learning_rate": current_lr,
+                    })
             else:
                 # 검증 손실/정확도 기록
                 val_loss_list.append(running_loss)
                 val_acc_list.append(running_acc.item())
-                
+                # 스칼라 기록
                 writer.add_scalar('Epoch/Val_Loss', running_loss, epoch)
                 writer.add_scalar('Epoch/Val_Accuracy', running_acc, epoch)
+                # WandB에 기록
+                if config.WANDB_ENABLED:
+                    wandb.log({
+                        "epoch": epoch + 1,
+                        "val_loss": running_loss,
+                        "val_accuracy": running_acc.item(),
+                    })
 
             if phase == 'val' and running_acc > best_acc: # 최고 성능 갱신
                 best_acc = running_acc
@@ -144,6 +185,15 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
     print(f'best acc: {best_acc:.4f}')
     print('=' * 40)
 
+    # WandB에 최종 결과 기록
+    if config.WANDB_ENABLED:
+        wandb.log({
+            "best_val_accuracy": best_acc.item(),
+            "final_train_loss": train_loss_list[-1],
+            "final_val_loss": val_loss_list[-1],
+            "training_time_minutes": time_elapsed / 60,
+        })
+
     # 최종 하이퍼파라미터 기록
     writer.add_hparams(
         {
@@ -166,10 +216,21 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
     writer.close()
     print(f"\nTensorBoard log saved: {writer.log_dir}")
 
-    # GPU 사용 통계 계산
+
+    # GPU 사용 통계 계산 및 WandB 기록
     if gpu_usage:
-        print(f'GPU Memory Usage (MB) - Max: {max(gpu_usage):.1f}, Min: {min(gpu_usage):.1f}, Avg: {sum(gpu_usage)/len(gpu_usage):.1f}')
-    
+        gpu_max = max(gpu_usage)
+        gpu_min = min(gpu_usage)
+        gpu_avg = sum(gpu_usage)/len(gpu_usage)
+        print(f'GPU Memory Usage (MB) - Max: {gpu_max:.1f}, Min: {gpu_min:.1f}, Avg: {gpu_avg:.1f}')
+        
+        if config.WANDB_ENABLED:
+            wandb.log({
+                "gpu_memory_max_mb": gpu_max,
+                "gpu_memory_min_mb": gpu_min,
+                "gpu_memory_avg_mb": gpu_avg,
+            })
+
     time_elapsed = time.time() - since # 학습 시간 계산
     print(f'Training complete in {time_elapsed//60:.0f}m {time_elapsed%60:.0f}s')
     print(f'Best val Acc: {best_acc:.4f}')
@@ -177,5 +238,10 @@ def train_model(model, dataloader_dict, criterion, optimizer, num_epochs, device
     # 최고 성능 모델 가중치 로드
     if best_model_wts is not None:
         model.load_state_dict(best_model_wts)
-    
+
+    # WandB run 종료
+    if config.WANDB_ENABLED:
+        wandb.finish()
+        print("WandB run finished")
+
     return model, best_acc

@@ -8,9 +8,15 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # CUDA �
 BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # 현재 파일 기준 디렉토리
 RESULT_DIR = os.path.join(BASE_DIR, "result") # 결과 저장 디렉토리
 os.makedirs(RESULT_DIR, exist_ok=True) # 디렉토리 없으면 생성
+
+# TensorBoard 설정
 TENSORBOARD_LOG_DIR = os.path.join(os.path.dirname(BASE_DIR), "logs")  # TensorBoard 로그 폴더
 os.makedirs(TENSORBOARD_LOG_DIR, exist_ok=True)  # 로그 폴더 생성
 
+# WandB 설정
+WANDB_ENABLED = True  # WandB 사용 여부
+# WANDB_ENTITY = "your-team-name"  # WandB 팀 이름 (개인 계정이면 None)
+WANDB_PROJECT = "ResNet_implement"  # 프로젝트 이름
 
 # 데이터 경로
 DATA_PATH = '/home/user3/data/cifar-python/cifar-10-batches-py'
